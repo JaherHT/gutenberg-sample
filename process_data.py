@@ -12,7 +12,7 @@ import glob
 import ast
 import pandas as pd
 import traceback
-import nltk  # Added
+import nltk
 
 from src.pipeline import process_book
 from src.utils import get_langs_dict
@@ -96,7 +96,13 @@ if __name__ == '__main__':
                     print(f"# WARNING: Metadata missing for {PG_id}. Skipping.")
                 continue
 
+            # Strict language filtering - MODIFIED SECTION
             lang_list = ast.literal_eval(metadata.loc[PG_id, "language"])
+            if lang_list != ['en']:  # Changed condition
+                if not args.quiet:
+                    print(f"# WARNING: Non-English/multilingual book {PG_id} - Skipping.")
+                continue
+
             lang_id = lang_list[0]
             language = langs_dict.get(lang_id, "english")
 
@@ -111,7 +117,7 @@ if __name__ == '__main__':
             pbooks += 1
             if not args.quiet:
                 print(f"Processed {pbooks} books...", end="\r")
-
+                
         except UnicodeDecodeError:
             if not args.quiet:
                 print(f"# WARNING: Encoding error in '{file_basename}'")
