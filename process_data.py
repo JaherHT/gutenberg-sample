@@ -88,7 +88,12 @@ if __name__ == '__main__':
 
     # loop over all books in the raw-folder
     pbooks = 0
-    for filename in glob.glob(join(args.raw, 'PG%s_raw.txt' % (args.pattern))):
+    import re
+    pattern = re.compile(r"PG(\d{1,3})_raw\.txt$")  # Match IDs 1-100
+    for filename in glob.glob(join(args.raw, 'PG*_raw.txt')):
+        PG_id = filename.split("/")[-1].split("_")[0][2:]  # Extract numeric ID
+        if not PG_id.isdigit() or int(PG_id) > 100:
+            continue  # Skip IDs > 100
         # The process_books function will fail very rarely, whne
         # a file tagged as UTf-8 is not really UTF-8. We kust
         # skip those books.
