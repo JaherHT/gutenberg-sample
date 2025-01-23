@@ -43,13 +43,7 @@ if __name__ == '__main__':
         default='metadata/',
         type=str)
 
-    # pattern matching
-    parser.add_argument(
-        "-p", "--pattern",
-        help="Patterns to get only a subset of books.",
-        default='*',
-        type=str)
-
+    # Remove the pattern argument since we're hardcoding the selection
     # update argument
     parser.add_argument(
         "-k", "--keep_rdf",
@@ -83,8 +77,7 @@ if __name__ == '__main__':
     # Update the .mirror directory via rsync
     # --------------------------------------
     # We sync the 'mirror_dir' with PG's site via rsync
-    # The matching pattern, explained below, should match
-    # only UTF-8 files.
+    # The pattern now includes only the first 100 book IDs
 
     # pass the -v flag to rsync if not in quiet mode
     if args.quiet:
@@ -92,16 +85,15 @@ if __name__ == '__main__':
     else:
         vstring = "v"
 
-    # Pattern to match the +  but not the - :
-    #
-    # + 12345 .   t   x  t .            utf  8
-    # - 12345 .   t   x  t .      utf8 .gzi  p
-    # + 12345 -   0   .  t x                 t 
-    #---------------------------------------------
-    #        [.-][t0][x.]t[x.]    *         [t8]
+    # Generate include patterns for book IDs 1 to 100
+    includes = []
+    for book_id in range(1, 101):
+        # Pattern matches files starting with pg{id} followed by [.-] and other suffixes
+        pattern = f"pg{book_id}[.-][t0][x.]t[x.]*[t8]"
+        includes.extend(["--include", pattern])
+
     sp_args = ["rsync", "-am%s" % vstring,
-               "--include", "*/",
-               "--include", "[p123456789][g0123456789]%s[.-][t0][x.]t[x.]*[t8]" % args.pattern,
+               "--include", "*/"] + includes + [
                "--exclude", "*",
                "aleph.gutenberg.org::gutenberg", args.mirror
                ]
@@ -109,16 +101,10 @@ if __name__ == '__main__':
 
     # Get rid of duplicates
     # ---------------------
-    # A very small portion of books are stored more than
-    # once in PG's site. We keep the newest one, see
-    # erase_duplicates_in_mirror docstring.
     dups_list = list_duplicates_in_mirror(mirror_dir=args.mirror)
 
     # Populate raw from mirror
     # ------------------------
-    # We populate 'raw_dir' hardlinking to
-    # the hidden 'mirror_dir'. Names are standarized
-    # into PG12345_raw.txt form.
     populate_raw_from_mirror(
         mirror_dir=args.mirror,
         raw_dir=args.raw,
@@ -129,8 +115,6 @@ if __name__ == '__main__':
 
     # Update metadata
     # ---------------
-    # By default, update the whole metadata csv
-    # file each time new data is downloaded.
     make_df_metadata(
         path_xml=os.path.join(args.metadata, 'rdf-files.tar.bz2'),
         path_out=os.path.join(args.metadata, 'metadata.csv'),
@@ -139,7 +123,6 @@ if __name__ == '__main__':
 
     # Bookshelves
     # -----------
-    # Get bookshelves and their respective books and titles as dicts
     BS_dict, BS_num_to_category_str_dict = parse_bookshelves()
     with open("metadata/bookshelves_ebooks_dict.pkl", 'wb') as fp:
         pickle.dump(BS_dict, fp)
