@@ -12,11 +12,12 @@ import glob
 import ast
 import pandas as pd
 import traceback
-import nltk
+import nltk  # Added
 
 from src.pipeline import process_book
 from src.utils import get_langs_dict
 
+# Ensure NLTK resources are downloaded
 try:
     nltk.data.find('tokenizers/punkt_tab')
 except LookupError:
@@ -72,39 +73,33 @@ if __name__ == '__main__':
     if os.path.isdir(args.output_counts) is False:
         raise ValueError(f"Counts output directory '{args.output_counts}' does not exist.")
 
-    # Load metadata with 'PG'-prefixed IDs as strings
-    metadata = pd.read_csv("metadata/metadata.csv").set_index("id")  # Ensure 'id' column has 'PG10000' entries
+    metadata = pd.read_csv("metadata/metadata.csv").set_index("id")
     langs_dict = get_langs_dict()
 
     pbooks = 0
     for filename in glob.glob(join(args.raw, 'PG*_raw.txt')):
         try:
             file_basename = os.path.basename(filename)
-            # Extract full PG ID (e.g., 'PG10073' from 'PG10073_raw.txt')
-            PG_id = file_basename.split("_")[0]  # Now 'PG10073'
+            PG_id = file_basename.split("_")[0]
 
-            # Validate ID format and range
             if not PG_id.startswith("PG") or not PG_id[2:].isdigit():
                 if not args.quiet:
                     print(f"# WARNING: Invalid ID '{PG_id}'. Skipping.")
                 continue
             
-            pg_num = int(PG_id[2:])  # Extract numeric part for range check
+            pg_num = int(PG_id[2:])
             if pg_num < 10000 or pg_num >= 10100:
-                continue  # Skip out-of-range IDs
+                continue
 
-            # Check metadata existence using the full 'PG'-prefixed ID
             if PG_id not in metadata.index:
                 if not args.quiet:
                     print(f"# WARNING: Metadata missing for {PG_id}. Skipping.")
                 continue
 
-            # Get language
             lang_list = ast.literal_eval(metadata.loc[PG_id, "language"])
             lang_id = lang_list[0]
             language = langs_dict.get(lang_id, "english")
 
-            # Process the book
             process_book(
                 path_to_raw_file=filename,
                 text_dir=args.output_text,
