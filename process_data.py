@@ -12,10 +12,15 @@ import glob
 import ast
 import pandas as pd
 import traceback
+import nltk
 
 from src.pipeline import process_book
 from src.utils import get_langs_dict
 
+try:
+    nltk.data.find('tokenizers/punkt_tab')
+except LookupError:
+    nltk.download('punkt_tab')
 
 if __name__ == '__main__':
 
