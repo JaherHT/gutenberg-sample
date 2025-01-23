@@ -11,6 +11,7 @@ import argparse
 import glob
 import ast
 import pandas as pd
+import traceback  # Added for detailed error logging
 
 from src.pipeline import process_book
 from src.utils import get_langs_dict
@@ -88,28 +89,28 @@ if __name__ == '__main__':
 
     # loop over all books in the raw-folder
     pbooks = 0
-    import re
-    pattern = re.compile(r"PG(\d{1,3})_raw\.txt$")  # Match IDs 1-100
     for filename in glob.glob(join(args.raw, 'PG*_raw.txt')):
-        PG_id = filename.split("/")[-1].split("_")[0][2:]  # Extract numeric ID
-        if not PG_id.isdigit() or int(PG_id) > 100:
-            continue  # Skip IDs > 100
-        # The process_books function will fail very rarely, whne
-        # a file tagged as UTf-8 is not really UTF-8. We kust
-        # skip those books.
         try:
-            # get PG_id
-            PG_id = filename.split("/")[-1].split("_")[0]
+            # Extract NUMERIC ID from filename (e.g., "PG123_raw.txt" -> "123")
+            file_basename = os.path.basename(filename)
+            PG_id_numeric = file_basename.split("_")[0][2:]  # Remove "PG" prefix
+            
+            # Skip invalid or out-of-range IDs
+            if not PG_id_numeric.isdigit() or int(PG_id_numeric) > 100:
+                continue
 
-            # get language from metadata
-            # default is english
-            language = "english"
-            # language is a string representing a list of languages codes
-            lang_id = ast.literal_eval(metadata.loc[PG_id, "language"])[0]
-            if lang_id in langs_dict.keys():
-                language = langs_dict[lang_id]
+            # Check if metadata exists for this book
+            if PG_id_numeric not in metadata.index:
+                if not args.quiet:
+                    print(f"# WARNING: Metadata missing for PG{PG_id_numeric}. Skipping.")
+                continue
 
-            # process the book: strip headers, tokenize, count
+            # Get language from metadata
+            lang_list = ast.literal_eval(metadata.loc[PG_id_numeric, "language"])
+            lang_id = lang_list[0]  # Use first language code
+            language = langs_dict.get(lang_id, "english")  # Fallback to English
+
+            # Process the book
             process_book(
                 path_to_raw_file=filename,
                 text_dir=args.output_text,
@@ -120,13 +121,15 @@ if __name__ == '__main__':
             )
             pbooks += 1
             if not args.quiet:
-                print("Processed %d books..." % pbooks, end="\r")
+                print(f"Processed {pbooks} books...", end="\r")
+        
         except UnicodeDecodeError:
             if not args.quiet:
-                print("# WARNING: cannot process '%s' (encoding not UTF-8)" % filename)
-        except KeyError:
+                print(f"# WARNING: Encoding error in '{file_basename}'")
+        except KeyError as e:
             if not args.quiet:
-                print("# WARNING: metadata for '%s' not found" % filename)
+                print(f"# WARNING: Metadata field missing for PG{PG_id_numeric} - {str(e)}")
         except Exception as e:
             if not args.quiet:
-                print("# WARNING: cannot process '%s' (unkown error)" % filename)
+                print(f"# ERROR: Failed to process '{file_basename}' - {str(e)}")
+                traceback.print_exc()  # Debugging
