@@ -43,30 +43,24 @@ if __name__ == '__main__':
         default='metadata/',
         type=str)
 
-    # Remove the pattern argument since we're hardcoding the selection
-    # update argument
     parser.add_argument(
         "-k", "--keep_rdf",
         action="store_false",
         help="If there is an RDF file in metadata dir, do not overwrite it.")
 
-    # update argument
     parser.add_argument(
         "-owr", "--overwrite_raw",
         action="store_true",
         help="Overwrite files in raw.")
 
-    # quiet argument, to supress info
     parser.add_argument(
         "-q", "--quiet",
         action="store_true",
         help="Quiet mode, do not print info, warnings, etc"
         )
 
-    # create the parser
     args = parser.parse_args()
 
-    # check that all dirs exist
     if not os.path.isdir(args.mirror):
         raise ValueError("The specified mirror directory does not exist.")
     if not os.path.isdir(args.raw):
@@ -74,25 +68,17 @@ if __name__ == '__main__':
     if not os.path.isdir(args.metadata):
         raise ValueError("The specified metadata directory does not exist.")
 
-    # Update the .mirror directory via rsync
-    # --------------------------------------
-    # We sync the 'mirror_dir' with PG's site via rsync
-    # The pattern now includes only the first 100 book IDs
-
-    # pass the -v flag to rsync if not in quiet mode
     if args.quiet:
         vstring = ""
     else:
         vstring = "v"
 
-    # Generate include patterns for book IDs 1 to 100 with exact matching
+    # Download books 10000-10099 (100 books)
     includes = []
-    for book_id in range(1, 101):
-        # Match exact book IDs using a more precise pattern
+    for book_id in range(10000, 10100):
         pattern = f"pg{book_id}[.-][t0][x.]t[x.]*[t8]"
         includes.extend(["--include", pattern])
-    
-    # Add --delete-excluded to clean up unwanted files
+
     sp_args = ["rsync", "-am%s" % vstring, "--delete-excluded",
                "--include", "*/"] + includes + [
                "--exclude", "*",
@@ -100,12 +86,8 @@ if __name__ == '__main__':
                ]
     subprocess.call(sp_args)
 
-    # Get rid of duplicates
-    # ---------------------
     dups_list = list_duplicates_in_mirror(mirror_dir=args.mirror)
 
-    # Populate raw from mirror
-    # ------------------------
     populate_raw_from_mirror(
         mirror_dir=args.mirror,
         raw_dir=args.raw,
@@ -114,16 +96,12 @@ if __name__ == '__main__':
         quiet=args.quiet
         )
 
-    # Update metadata
-    # ---------------
     make_df_metadata(
         path_xml=os.path.join(args.metadata, 'rdf-files.tar.bz2'),
         path_out=os.path.join(args.metadata, 'metadata.csv'),
         update=args.keep_rdf
         )
 
-    # Bookshelves
-    # -----------
     BS_dict, BS_num_to_category_str_dict = parse_bookshelves()
     with open("metadata/bookshelves_ebooks_dict.pkl", 'wb') as fp:
         pickle.dump(BS_dict, fp)
