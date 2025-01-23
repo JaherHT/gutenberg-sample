@@ -85,14 +85,15 @@ if __name__ == '__main__':
     else:
         vstring = "v"
 
-    # Generate include patterns for book IDs 1 to 100
+    # Generate include patterns for book IDs 1 to 100 with exact matching
     includes = []
     for book_id in range(1, 101):
-        # Pattern matches files starting with pg{id} followed by [.-] and other suffixes
+        # Match exact book IDs using a more precise pattern
         pattern = f"pg{book_id}[.-][t0][x.]t[x.]*[t8]"
         includes.extend(["--include", pattern])
-
-    sp_args = ["rsync", "-am%s" % vstring,
+    
+    # Add --delete-excluded to clean up unwanted files
+    sp_args = ["rsync", "-am%s" % vstring, "--delete-excluded",
                "--include", "*/"] + includes + [
                "--exclude", "*",
                "aleph.gutenberg.org::gutenberg", args.mirror
