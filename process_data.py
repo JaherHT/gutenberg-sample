@@ -67,34 +67,35 @@ if __name__ == '__main__':
     if os.path.isdir(args.output_counts) is False:
         raise ValueError(f"Counts output directory '{args.output_counts}' does not exist.")
 
-    metadata = pd.read_csv("metadata/metadata.csv").set_index("id")
+    # Load metadata with 'PG'-prefixed IDs as strings
+    metadata = pd.read_csv("metadata/metadata.csv").set_index("id")  # Ensure 'id' column has 'PG10000' entries
     langs_dict = get_langs_dict()
 
     pbooks = 0
     for filename in glob.glob(join(args.raw, 'PG*_raw.txt')):
         try:
             file_basename = os.path.basename(filename)
-            PG_id_numeric = file_basename.split("_")[0][2:]  # Extract numeric ID (e.g., "10000")
+            # Extract full PG ID (e.g., 'PG10073' from 'PG10073_raw.txt')
+            PG_id = file_basename.split("_")[0]  # Now 'PG10073'
 
-            # Validate and convert ID
-            if not PG_id_numeric.isdigit():
+            # Validate ID format and range
+            if not PG_id.startswith("PG") or not PG_id[2:].isdigit():
                 if not args.quiet:
-                    print(f"# WARNING: Invalid ID '{PG_id_numeric}' in {file_basename}. Skipping.")
+                    print(f"# WARNING: Invalid ID '{PG_id}'. Skipping.")
                 continue
-            pg_id = int(PG_id_numeric)
+            
+            pg_num = int(PG_id[2:])  # Extract numeric part for range check
+            if pg_num < 10000 or pg_num >= 10100:
+                continue  # Skip out-of-range IDs
 
-            # Check if ID is in the target range (10000-10099)
-            if pg_id < 10000 or pg_id >= 10100:
-                continue
-
-            # Check metadata existence
-            if pg_id not in metadata.index:
+            # Check metadata existence using the full 'PG'-prefixed ID
+            if PG_id not in metadata.index:
                 if not args.quiet:
-                    print(f"# WARNING: Metadata missing for PG{pg_id}. Skipping.")
+                    print(f"# WARNING: Metadata missing for {PG_id}. Skipping.")
                 continue
 
             # Get language
-            lang_list = ast.literal_eval(metadata.loc[pg_id, "language"])
+            lang_list = ast.literal_eval(metadata.loc[PG_id, "language"])
             lang_id = lang_list[0]
             language = langs_dict.get(lang_id, "english")
 
@@ -116,7 +117,7 @@ if __name__ == '__main__':
                 print(f"# WARNING: Encoding error in '{file_basename}'")
         except KeyError as e:
             if not args.quiet:
-                print(f"# WARNING: Metadata field missing for PG{pg_id} - {str(e)}")
+                print(f"# WARNING: Metadata field missing for {PG_id} - {str(e)}")
         except Exception as e:
             if not args.quiet:
                 print(f"# ERROR: Failed to process '{file_basename}' - {str(e)}")
