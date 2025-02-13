@@ -88,7 +88,7 @@ if __name__ == '__main__':
                 continue
             
             pg_num = int(PG_id[2:])
-            if pg_num < 10135 or pg_num >= 10165:
+            if pg_num < 10135 or pg_num >= 10300:
                 continue
 
             if PG_id not in metadata.index:
