@@ -73,7 +73,7 @@ if __name__ == '__main__':
     else:
         vstring = "v"
 
-    # Download books 10000-10099 (100 books)
+    # Download books 10000-10135 (~100 books)
     includes = []
     for book_id in range(10000, 10135):
         pattern = f"pg{book_id}[.-][t0][x.]t[x.]*[t8]"
