@@ -36,13 +36,23 @@ pip install -r requirements.txt
 ```
 
 ## Getting the data
-To get a local copy of the PG data, just run
-```
+This repository is the sample: books PG10000 to PG10134 (135 books). Books are downloaded over plain HTTP, so no rsync is needed.
+
+To get all 135 books, run
+```bash
 python get_data.py
 ```
-This will download a copy of all UTF-8 books in PG and will create a csv file with metadata (e.g. author, title, year, ...).
 
-Notice that if you already have some of the data, the program will only download those you are missing (we use `rsync` for this). It is hence easy to update the dataset periodically to keep it up-to-date by just running `get_data.py`.
+To get only a fraction, use `--fraction`. The books are picked at random, and `--seed` makes the pick repeatable:
+```bash
+python get_data.py --fraction 0.1
+```
+
+This writes the books to `data/raw/` and a csv with metadata (e.g. author, title, year, ...) to `metadata/`.
+
+- Books already in `data/raw/` are skipped, so you can run it again to add more.
+- Books that the server does not have are reported and skipped.
+- The program waits 1 second between downloads by default. Change this with `--wait`, or point `--base_url` at a mirror.
 
 
 ## Processing the data

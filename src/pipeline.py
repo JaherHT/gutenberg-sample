@@ -53,7 +53,7 @@ def process_book(
         raise ValueError("You must specify a path to the raw file to process.")
    
     # get PG number
-    PG_number = path_to_raw_file.split("/")[-1].split("_")[0][2:]
+    PG_number = os.path.basename(path_to_raw_file).split("_")[0][2:]
 
     if overwrite_all or\
         (not os.path.isfile(os.path.join(text_dir,"PG%s_text.txt"%PG_number))) or \
